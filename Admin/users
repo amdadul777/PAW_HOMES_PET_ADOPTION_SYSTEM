@@ -1,1 +1,100 @@
+<?php
+require_once '../config.php';
+require_once 'auth_guard.php';
+
+$message = '';
+
+// Handle delete user
+if (isset($_GET['delete'])) {
+    $del_id = (int)$_GET['delete'];
+    // Delete user's adoption requests first
+    $pdo->prepare("DELETE FROM adoptions WHERE user_id = ?")->execute([$del_id]);
+    $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$del_id]);
+    $message = "User deleted successfully.";
+}
+
+$users = $pdo->query("
+    SELECT u.*, COUNT(a.id) AS total_requests
+    FROM users u
+    LEFT JOIN adoptions a ON u.id = a.user_id
+    GROUP BY u.id
+    ORDER BY u.created_at DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Users - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome Admin</div>
+    <div class="nav-links">
+        <a href="../index.php">View Site</a>
+        <a href="logout.php">Logout</a>
+    </div>
+</nav>
+
+<div class="admin-layout">
+    <div class="sidebar">
+        <h3>Admin Menu</h3>
+        <a href="dashboard.php">📊 Dashboard</a>
+        <a href="pets.php">🐾 Manage Pets</a>
+        <a href="add_pet.php">➕ Add Pet</a>
+        <a href="adoptions.php">📋 Adoptions</a>
+        <a href="users.php" class="active">👥 Users</a>
+    </div>
+
+    <div class="admin-content">
+        <h2 style="color:#2c7a4b; margin-bottom:20px;">Registered Users</h2>
+
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?= $message ?></div>
+        <?php endif; ?>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Requests</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $user): ?>
+                    <tr>
+                        <td><?= $user['id'] ?></td>
+                        <td><?= htmlspecialchars($user['name']) ?></td>
+                        <td><?= htmlspecialchars($user['email']) ?></td>
+                        <td><?= htmlspecialchars($user['phone'] ?: '—') ?></td>
+                        <td><small><?= htmlspecialchars(substr($user['address'], 0, 40)) ?><?= strlen($user['address']) > 40 ? '...' : '' ?></small></td>
+                        <td style="text-align:center;"><?= $user['total_requests'] ?></td>
+                        <td><?= date('d M Y', strtotime($user['created_at'])) ?></td>
+                        <td>
+                            <a href="users.php?delete=<?= $user['id'] ?>"
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Delete this user and all their adoption requests?')">Delete</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($users)): ?>
+                        <tr><td colspan="8">No registered users yet.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
 
