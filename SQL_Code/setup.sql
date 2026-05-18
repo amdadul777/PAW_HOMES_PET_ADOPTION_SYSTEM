@@ -22,3 +22,15 @@ CREATE TABLE IF NOT EXISTS pets (
     status ENUM('Available','Adopted','Pending') DEFAULT 'Available',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Adoption requests table
+CREATE TABLE IF NOT EXISTS adoptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    pet_id INT NOT NULL,
+    message TEXT,
+    status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (pet_id) REFERENCES pets(id)
+);
