@@ -1,0 +1,81 @@
+<?php
+require_once 'config.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+$stmt = $pdo->prepare("
+    SELECT a.*, p.name AS pet_name, p.species, p.breed, p.image_url, p.status AS pet_status
+    FROM adoptions a
+    JOIN pets p ON a.pet_id = p.id
+    WHERE a.user_id = ?
+    ORDER BY a.created_at DESC
+");
+$stmt->execute([$_SESSION['user_id']]);
+$requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Requests - PawHome</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome</div>
+    <div class="nav-links">
+        <a href="index.php">Home</a>
+        <a href="pets.php">Pets</a>
+        <a href="my_requests.php" class="active">My Requests</a>
+        <a href="logout.php">Logout (<?= htmlspecialchars($_SESSION['user_name']) ?>)</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h2 class="section-title">My Adoption Requests</h2>
+
+    <?php if (empty($requests)): ?>
+        <div class="alert alert-info">You haven't submitted any adoption requests yet. <a href="pets.php">Browse pets</a></div>
+    <?php else: ?>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Pet</th>
+                    <th>Species</th>
+                    <th>Breed</th>
+                    <th>Request Status</th>
+                    <th>Date Submitted</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($requests as $r): ?>
+                <tr>
+                    <td>
+                        <img src="<?= htmlspecialchars($r['image_url']) ?>" style="width:50px;height:40px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">
+                        <?= htmlspecialchars($r['pet_name']) ?>
+                    </td>
+                    <td><?= htmlspecialchars($r['species']) ?></td>
+                    <td><?= htmlspecialchars($r['breed']) ?></td>
+                    <td><span class="badge <?= strtolower($r['status']) ?>"><?= $r['status'] ?></span></td>
+                    <td><?= date('d M Y', strtotime($r['created_at'])) ?></td>
+                    <td><?= htmlspecialchars(substr($r['message'], 0, 60)) ?><?= strlen($r['message']) > 60 ? '...' : '' ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+</div>
+
+<footer class="footer">
+    <p>🐾 PawHome Pet Adoption &copy; <?= date('Y') ?></p>
+</footer>
+
+</body>
+</html>
