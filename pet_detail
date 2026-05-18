@@ -1,1 +1,117 @@
+<?php
+require_once 'config.php';
 
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if (!$id) { header('Location: pets.php'); exit; }
+
+$stmt = $pdo->prepare("SELECT * FROM pets WHERE id = ?");
+$stmt->execute([$id]);
+$pet = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$pet) { echo "Pet not found."; exit; }
+
+$message = '';
+$error = '';
+
+// Handle adoption request
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: login.php?redirect=pet_detail.php?id=' . $id);
+        exit;
+    }
+
+    // Check if user already requested this pet
+    $check = $pdo->prepare("SELECT id FROM adoptions WHERE user_id = ? AND pet_id = ?");
+    $check->execute([$_SESSION['user_id'], $id]);
+    if ($check->fetch()) {
+        $error = "You have already submitted an adoption request for this pet.";
+    } elseif ($pet['status'] !== 'Available') {
+        $error = "This pet is no longer available for adoption.";
+    } else {
+        $msg = trim($_POST['message']);
+        $stmt2 = $pdo->prepare("INSERT INTO adoptions (user_id, pet_id, message) VALUES (?, ?, ?)");
+        $stmt2->execute([$_SESSION['user_id'], $id, $msg]);
+
+        // Update pet status to Pending
+        $pdo->prepare("UPDATE pets SET status = 'Pending' WHERE id = ?")->execute([$id]);
+        $pet['status'] = 'Pending';
+        $message = "Your adoption request has been submitted! We will contact you soon.";
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><?= htmlspecialchars($pet['name']) ?> - PawHome</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome</div>
+    <div class="nav-links">
+        <a href="index.php">Home</a>
+        <a href="pets.php">Pets</a>
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <a href="my_requests.php">My Requests</a>
+            <a href="logout.php">Logout (<?= htmlspecialchars($_SESSION['user_name']) ?>)</a>
+        <?php else: ?>
+            <a href="login.php">Login</a>
+            <a href="register.php">Register</a>
+        <?php endif; ?>
+        <a href="admin/login.php">Admin</a>
+    </div>
+</nav>
+
+<div class="container">
+    <a href="pets.php" class="back-link">← Back to Pets</a>
+
+    <?php if ($message): ?>
+        <div class="alert alert-success"><?= $message ?></div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert alert-error"><?= $error ?></div>
+    <?php endif; ?>
+
+    <div class="pet-detail">
+        <img src="<?= htmlspecialchars($pet['image_url']) ?>" alt="<?= htmlspecialchars($pet['name']) ?>" onerror="this.src='https://via.placeholder.com/400x380?text=No+Image'">
+        <div class="pet-detail-info">
+            <h2><?= htmlspecialchars($pet['name']) ?></h2>
+            <p><strong>Species:</strong> <?= htmlspecialchars($pet['species']) ?></p>
+            <p><strong>Breed:</strong> <?= htmlspecialchars($pet['breed']) ?></p>
+            <p><strong>Age:</strong> <?= htmlspecialchars($pet['age']) ?></p>
+            <p><strong>Gender:</strong> <?= htmlspecialchars($pet['gender']) ?></p>
+            <p><strong>Status:</strong> <span class="badge <?= strtolower($pet['status']) ?>"><?= $pet['status'] ?></span></p>
+            <p class="description"><?= nl2br(htmlspecialchars($pet['description'])) ?></p>
+
+            <?php if ($pet['status'] === 'Available'): ?>
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <h3 style="margin-top:20px; color:#2c7a4b;">Request Adoption</h3>
+                    <form method="POST" style="margin-top:10px;">
+                        <div class="form-group">
+                            <label>Tell us why you want to adopt <?= htmlspecialchars($pet['name']) ?>:</label>
+                            <textarea name="message" placeholder="Write a short message..."></textarea>
+                        </div>
+                        <button type="submit" class="btn">Submit Request</button>
+                    </form>
+                <?php else: ?>
+                    <div class="alert alert-info" style="margin-top:16px;">
+                        Please <a href="login.php?redirect=pet_detail.php?id=<?= $id ?>"><strong>login</strong></a> to request adoption.
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="alert alert-info" style="margin-top:16px;">
+                    This pet is currently <strong><?= $pet['status'] ?></strong> and not available for new requests.
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<footer class="footer">
+    <p>🐾 PawHome Pet Adoption &copy; <?= date('Y') ?></p>
+</footer>
+
+</body>
+</html>
