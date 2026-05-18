@@ -1,0 +1,72 @@
+<?php
+require_once 'config.php';
+
+// Fetch available pets
+$stmt = $pdo->query("SELECT * FROM pets WHERE status = 'Available' ORDER BY created_at DESC");
+$pets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawHome - Pet Adoption</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome</div>
+    <div class="nav-links">
+        <a href="index.php" class="active">Home</a>
+        <a href="pets.php">Pets</a>
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <a href="my_requests.php">My Requests</a>
+            <a href="logout.php">Logout (<?= htmlspecialchars($_SESSION['user_name']) ?>)</a>
+        <?php else: ?>
+            <a href="login.php">Login</a>
+            <a href="register.php">Register</a>
+        <?php endif; ?>
+        <a href="admin/login.php">Admin</a>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<div class="hero">
+    <h1>Find Your Perfect Pet</h1>
+    <p>Give a loving home to a pet in need. Browse our available animals and start your adoption journey today.</p>
+    <a href="pets.php" class="btn">Browse Pets</a>
+</div>
+
+<!-- Featured Pets -->
+<div class="container">
+    <h2 class="section-title">Available Pets</h2>
+    <div class="pet-grid">
+        <?php foreach ($pets as $pet): ?>
+        <div class="pet-card">
+            <img src="<?= htmlspecialchars($pet['image_url']) ?>" alt="<?= htmlspecialchars($pet['name']) ?>" onerror="this.src='images/default_pet.png'">
+            <div class="pet-info">
+                <h3><?= htmlspecialchars($pet['name']) ?></h3>
+                <p><strong>Species:</strong> <?= htmlspecialchars($pet['species']) ?></p>
+                <p><strong>Breed:</strong> <?= htmlspecialchars($pet['breed']) ?></p>
+                <p><strong>Age:</strong> <?= htmlspecialchars($pet['age']) ?></p>
+                <p><strong>Gender:</strong> <?= htmlspecialchars($pet['gender']) ?></p>
+                <span class="badge available">Available</span>
+                <a href="pet_detail.php?id=<?= $pet['id'] ?>" class="btn btn-sm">View Details</a>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        <?php if (empty($pets)): ?>
+            <p>No pets available at the moment. Check back soon!</p>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>🐾 PawHome Pet Adoption &copy; <?= date('Y') ?> | Helping pets find loving homes</p>
+</footer>
+
+</body>
+</html>
