@@ -1,1 +1,106 @@
+<?php
+require_once 'config.php';
+
+if (isset($_SESSION['user_id'])) { header('Location: index.php'); exit; }
+
+$error = '';
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name    = trim($_POST['name']);
+    $email   = trim($_POST['email']);
+    $phone   = trim($_POST['phone']);
+    $address = trim($_POST['address']);
+    $pass    = $_POST['password'];
+    $confirm = $_POST['confirm_password'];
+
+    if (!$name || !$email || !$pass || !$confirm) {
+        $error = "Please fill in all required fields.";
+    } elseif ($pass !== $confirm) {
+        $error = "Passwords do not match.";
+    } elseif (strlen($pass) < 6) {
+        $error = "Password must be at least 6 characters.";
+    } else {
+        // Check if email exists
+        $chk = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $chk->execute([$email]);
+        if ($chk->fetch()) {
+            $error = "This email is already registered.";
+        } else {
+            $hashed = md5($pass); // Simple MD5 for XAMPP demo (use password_hash in production)
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, password, phone, address) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $email, $hashed, $phone, $address]);
+            $success = "Registration successful! You can now <a href='login.php'>login</a>.";
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - PawHome</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome</div>
+    <div class="nav-links">
+        <a href="index.php">Home</a>
+        <a href="pets.php">Pets</a>
+        <a href="login.php">Login</a>
+        <a href="register.php" class="active">Register</a>
+    </div>
+</nav>
+
+<div class="form-container">
+    <h2>Create Account</h2>
+
+    <?php if ($error): ?>
+        <div class="alert alert-error"><?= $error ?></div>
+    <?php endif; ?>
+    <?php if ($success): ?>
+        <div class="alert alert-success"><?= $success ?></div>
+    <?php endif; ?>
+
+    <form method="POST">
+        <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" name="name" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+            <label>Email *</label>
+            <input type="email" name="email" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            <input type="text" name="phone" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+            <label>Address</label>
+            <textarea name="address"><?= htmlspecialchars($_POST['address'] ?? '') ?></textarea>
+        </div>
+        <div class="form-group">
+            <label>Password *</label>
+            <input type="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label>Confirm Password *</label>
+            <input type="password" name="confirm_password" required>
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Register</button>
+    </form>
+
+    <div class="form-footer">
+        Already have an account? <a href="login.php">Login here</a>
+    </div>
+</div>
+
+<footer class="footer">
+    <p>🐾 PawHome Pet Adoption &copy; <?= date('Y') ?></p>
+</footer>
+
+</body>
+</html>
 
