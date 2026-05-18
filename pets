@@ -1,1 +1,96 @@
+<?php
+require_once 'config.php';
+
+$species_filter = isset($_GET['species']) ? $_GET['species'] : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+$sql = "SELECT * FROM pets WHERE 1=1";
+$params = [];
+
+if ($species_filter) {
+    $sql .= " AND species = ?";
+    $params[] = $species_filter;
+}
+
+if ($search) {
+    $sql .= " AND (name LIKE ? OR breed LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+$sql .= " ORDER BY created_at DESC";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$pets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Pets - PawHome</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome</div>
+    <div class="nav-links">
+        <a href="index.php">Home</a>
+        <a href="pets.php" class="active">Pets</a>
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <a href="my_requests.php">My Requests</a>
+            <a href="logout.php">Logout (<?= htmlspecialchars($_SESSION['user_name']) ?>)</a>
+        <?php else: ?>
+            <a href="login.php">Login</a>
+            <a href="register.php">Register</a>
+        <?php endif; ?>
+        <a href="admin/login.php">Admin</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h2 class="section-title">All Pets</h2>
+
+    <!-- Filter Bar -->
+    <form class="filter-bar" method="GET">
+        <input type="text" name="search" placeholder="Search by name or breed..." value="<?= htmlspecialchars($search) ?>">
+        <select name="species">
+            <option value="">All Species</option>
+            <option value="Dog" <?= $species_filter == 'Dog' ? 'selected' : '' ?>>Dog</option>
+            <option value="Cat" <?= $species_filter == 'Cat' ? 'selected' : '' ?>>Cat</option>
+            <option value="Rabbit" <?= $species_filter == 'Rabbit' ? 'selected' : '' ?>>Rabbit</option>
+            <option value="Bird" <?= $species_filter == 'Bird' ? 'selected' : '' ?>>Bird</option>
+            <option value="Other" <?= $species_filter == 'Other' ? 'selected' : '' ?>>Other</option>
+        </select>
+        <button type="submit" class="btn">Filter</button>
+        <a href="pets.php" class="btn btn-secondary">Clear</a>
+    </form>
+
+    <div class="pet-grid">
+        <?php foreach ($pets as $pet): ?>
+        <div class="pet-card">
+            <img src="<?= htmlspecialchars($pet['image_url']) ?>" alt="<?= htmlspecialchars($pet['name']) ?>" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+            <div class="pet-info">
+                <h3><?= htmlspecialchars($pet['name']) ?></h3>
+                <p><strong>Species:</strong> <?= htmlspecialchars($pet['species']) ?></p>
+                <p><strong>Breed:</strong> <?= htmlspecialchars($pet['breed']) ?></p>
+                <p><strong>Age:</strong> <?= htmlspecialchars($pet['age']) ?></p>
+                <p><strong>Gender:</strong> <?= htmlspecialchars($pet['gender']) ?></p>
+                <span class="badge <?= strtolower($pet['status']) ?>"><?= $pet['status'] ?></span><br>
+                <a href="pet_detail.php?id=<?= $pet['id'] ?>" class="btn btn-sm">View Details</a>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        <?php if (empty($pets)): ?>
+            <p>No pets found matching your criteria.</p>
+        <?php endif; ?>
+    </div>
+</div>
+
+<footer class="footer">
+    <p>🐾 PawHome Pet Adoption &copy; <?= date('Y') ?></p>
+</footer>
+
+</body>
+</html>
 
