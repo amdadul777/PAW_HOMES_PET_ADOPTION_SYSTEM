@@ -1,1 +1,128 @@
+<?php
+require_once '../config.php';
+require_once 'auth_guard.php';
+
+$message = '';
+$error = '';
+
+// Handle delete
+if (isset($_GET['delete'])) {
+    $del_id = (int)$_GET['delete'];
+    // Remove adoption requests first
+    $pdo->prepare("DELETE FROM adoptions WHERE pet_id = ?")->execute([$del_id]);
+    $pdo->prepare("DELETE FROM pets WHERE id = ?")->execute([$del_id]);
+    $message = "Pet deleted successfully.";
+}
+
+// Handle status update
+if (isset($_GET['status']) && isset($_GET['id'])) {
+    $new_status = $_GET['status'];
+    $upd_id = (int)$_GET['id'];
+    if (in_array($new_status, ['Available', 'Adopted', 'Pending'])) {
+        $pdo->prepare("UPDATE pets SET status = ? WHERE id = ?")->execute([$new_status, $upd_id]);
+        $message = "Pet status updated.";
+    }
+}
+
+$pets = $pdo->query("SELECT * FROM pets ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Pets - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome Admin</div>
+    <div class="nav-links">
+        <a href="../index.php">View Site</a>
+        <a href="logout.php">Logout</a>
+    </div>
+</nav>
+
+<div class="admin-layout">
+    <div class="sidebar">
+        <h3>Admin Menu</h3>
+        <a href="dashboard.php">📊 Dashboard</a>
+        <a href="pets.php" class="active">🐾 Manage Pets</a>
+        <a href="add_pet.php">➕ Add Pet</a>
+        <a href="adoptions.php">📋 Adoptions</a>
+        <a href="users.php">👥 Users</a>
+    </div>
+
+    <div class="admin-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="color:#2c7a4b;">Manage Pets</h2>
+            <a href="add_pet.php" class="btn">+ Add New Pet</a>
+        </div>
+
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?= $message ?></div>
+        <?php endif; ?>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Species</th>
+                        <th>Breed</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($pets as $pet): ?>
+                    <tr>
+                        <td><?= $pet['id'] ?></td>
+                        <td>
+                            <img src="<?= htmlspecialchars($pet['image_url']) ?>"
+                                 style="width:55px;height:45px;object-fit:cover;border-radius:4px;"
+                                 onerror="this.src='https://via.placeholder.com/55x45?text=N/A'">
+                        </td>
+                        <td><?= htmlspecialchars($pet['name']) ?></td>
+                        <td><?= htmlspecialchars($pet['species']) ?></td>
+                        <td><?= htmlspecialchars($pet['breed']) ?></td>
+                        <td><?= htmlspecialchars($pet['age']) ?></td>
+                        <td><?= htmlspecialchars($pet['gender']) ?></td>
+                        <td>
+                            <span class="badge <?= strtolower($pet['status']) ?>"><?= $pet['status'] ?></span>
+                        </td>
+                        <td>
+                            <a href="edit_pet.php?id=<?= $pet['id'] ?>" class="btn btn-sm btn-secondary">Edit</a>
+                            <?php if ($pet['status'] !== 'Available'): ?>
+                                <a href="pets.php?id=<?= $pet['id'] ?>&status=Available"
+                                   class="btn btn-sm"
+                                   onclick="return confirm('Mark as Available?')">Set Available</a>
+                            <?php endif; ?>
+                            <?php if ($pet['status'] !== 'Adopted'): ?>
+                                <a href="pets.php?id=<?= $pet['id'] ?>&status=Adopted"
+                                   class="btn btn-sm"
+                                   style="background:#5a8fc2;"
+                                   onclick="return confirm('Mark as Adopted?')">Set Adopted</a>
+                            <?php endif; ?>
+                            <a href="pets.php?delete=<?= $pet['id'] ?>"
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Delete this pet? This will also remove all related adoption requests.')">Delete</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($pets)): ?>
+                        <tr><td colspan="9">No pets found.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
 
