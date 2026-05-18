@@ -1,1 +1,112 @@
+<?php
+require_once '../config.php';
+require_once 'auth_guard.php';
+
+$total_pets    = $pdo->query("SELECT COUNT(*) FROM pets")->fetchColumn();
+$available     = $pdo->query("SELECT COUNT(*) FROM pets WHERE status='Available'")->fetchColumn();
+$adopted       = $pdo->query("SELECT COUNT(*) FROM pets WHERE status='Adopted'")->fetchColumn();
+$total_users   = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+$total_requests= $pdo->query("SELECT COUNT(*) FROM adoptions")->fetchColumn();
+$pending_req   = $pdo->query("SELECT COUNT(*) FROM adoptions WHERE status='Pending'")->fetchColumn();
+
+// Recent adoption requests
+$recent = $pdo->query("
+    SELECT a.*, u.name AS user_name, p.name AS pet_name
+    FROM adoptions a
+    JOIN users u ON a.user_id = u.id
+    JOIN pets p ON a.pet_id = p.id
+    ORDER BY a.created_at DESC
+    LIMIT 5
+")->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - PawHome</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome Admin</div>
+    <div class="nav-links">
+        <a href="../index.php">View Site</a>
+        <a href="logout.php">Logout (<?= htmlspecialchars($_SESSION['admin_name']) ?>)</a>
+    </div>
+</nav>
+
+<div class="admin-layout">
+    <div class="sidebar">
+        <h3>Admin Menu</h3>
+        <a href="dashboard.php" class="active">📊 Dashboard</a>
+        <a href="pets.php">🐾 Manage Pets</a>
+        <a href="add_pet.php">➕ Add Pet</a>
+        <a href="adoptions.php">📋 Adoptions</a>
+        <a href="users.php">👥 Users</a>
+    </div>
+
+    <div class="admin-content">
+        <h2 style="margin-bottom:20px; color:#2c7a4b;">Dashboard</h2>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number"><?= $total_pets ?></div>
+                <div class="label">Total Pets</div>
+            </div>
+            <div class="stat-card">
+                <div class="number"><?= $available ?></div>
+                <div class="label">Available</div>
+            </div>
+            <div class="stat-card">
+                <div class="number"><?= $adopted ?></div>
+                <div class="label">Adopted</div>
+            </div>
+            <div class="stat-card">
+                <div class="number"><?= $total_users ?></div>
+                <div class="label">Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="number"><?= $total_requests ?></div>
+                <div class="label">Total Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" style="color:#e67e22;"><?= $pending_req ?></div>
+                <div class="label">Pending Requests</div>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom:12px; color:#555;">Recent Adoption Requests</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Pet</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($recent as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['user_name']) ?></td>
+                        <td><?= htmlspecialchars($r['pet_name']) ?></td>
+                        <td><span class="badge <?= strtolower($r['status']) ?>"><?= $r['status'] ?></span></td>
+                        <td><?= date('d M Y', strtotime($r['created_at'])) ?></td>
+                        <td><a href="adoptions.php" class="btn btn-sm">Manage</a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($recent)): ?>
+                        <tr><td colspan="5">No adoption requests yet.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
 
