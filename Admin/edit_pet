@@ -1,1 +1,135 @@
+<?php
+require_once '../config.php';
+require_once 'auth_guard.php';
+
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if (!$id) { header('Location: pets.php'); exit; }
+
+$stmt = $pdo->prepare("SELECT * FROM pets WHERE id = ?");
+$stmt->execute([$id]);
+$pet = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$pet) { echo "Pet not found."; exit; }
+
+$message = '';
+$error   = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name        = trim($_POST['name']);
+    $species     = trim($_POST['species']);
+    $breed       = trim($_POST['breed']);
+    $age         = trim($_POST['age']);
+    $gender      = $_POST['gender'];
+    $description = trim($_POST['description']);
+    $image_url   = trim($_POST['image_url']);
+    $status      = $_POST['status'];
+
+    if (!$name || !$species || !$gender) {
+        $error = "Name, Species, and Gender are required.";
+    } else {
+        if (empty($image_url)) {
+            $image_url = $pet['image_url'];
+        }
+        $upd = $pdo->prepare("UPDATE pets SET name=?, species=?, breed=?, age=?, gender=?, description=?, image_url=?, status=? WHERE id=?");
+        $upd->execute([$name, $species, $breed, $age, $gender, $description, $image_url, $status, $id]);
+        $message = "Pet updated successfully.";
+        // Refresh pet data
+        $stmt->execute([$id]);
+        $pet = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Pet - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand">🐾 PawHome Admin</div>
+    <div class="nav-links">
+        <a href="../index.php">View Site</a>
+        <a href="logout.php">Logout</a>
+    </div>
+</nav>
+
+<div class="admin-layout">
+    <div class="sidebar">
+        <h3>Admin Menu</h3>
+        <a href="dashboard.php">📊 Dashboard</a>
+        <a href="pets.php" class="active">🐾 Manage Pets</a>
+        <a href="add_pet.php">➕ Add Pet</a>
+        <a href="adoptions.php">📋 Adoptions</a>
+        <a href="users.php">👥 Users</a>
+    </div>
+
+    <div class="admin-content">
+        <h2 style="color:#2c7a4b; margin-bottom:20px;">Edit Pet: <?= htmlspecialchars($pet['name']) ?></h2>
+
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?= $message ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?= $error ?></div>
+        <?php endif; ?>
+
+        <div style="background:white; padding:28px; border-radius:8px; max-width:600px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <form method="POST">
+                <div class="form-group">
+                    <label>Pet Name *</label>
+                    <input type="text" name="name" required value="<?= htmlspecialchars($pet['name']) ?>">
+                </div>
+                <div class="form-group">
+                    <label>Species *</label>
+                    <select name="species" required>
+                        <?php foreach (['Dog','Cat','Rabbit','Bird','Fish','Other'] as $s): ?>
+                            <option value="<?= $s ?>" <?= $pet['species'] == $s ? 'selected' : '' ?>><?= $s ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Breed</label>
+                    <input type="text" name="breed" value="<?= htmlspecialchars($pet['breed']) ?>">
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="text" name="age" value="<?= htmlspecialchars($pet['age']) ?>">
+                </div>
+                <div class="form-group">
+                    <label>Gender *</label>
+                    <select name="gender" required>
+                        <option value="Male"   <?= $pet['gender'] == 'Male'   ? 'selected' : '' ?>>Male</option>
+                        <option value="Female" <?= $pet['gender'] == 'Female' ? 'selected' : '' ?>>Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        <?php foreach (['Available','Pending','Adopted'] as $st): ?>
+                            <option value="<?= $st ?>" <?= $pet['status'] == $st ? 'selected' : '' ?>><?= $st ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description"><?= htmlspecialchars($pet['description']) ?></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="text" name="image_url" value="<?= htmlspecialchars($pet['image_url']) ?>">
+                    <?php if ($pet['image_url']): ?>
+                        <img src="<?= htmlspecialchars($pet['image_url']) ?>" style="margin-top:8px; width:120px; height:90px; object-fit:cover; border-radius:4px;" onerror="this.style.display='none'">
+                    <?php endif; ?>
+                </div>
+                <button type="submit" class="btn">Save Changes</button>
+                <a href="pets.php" class="btn btn-secondary" style="margin-left:10px;">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
 
